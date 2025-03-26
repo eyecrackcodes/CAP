@@ -1,0 +1,947 @@
+{% extends "base.html" %}
+
+{% block title %}PPL Performance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>PPL Performance Dashboard</h1>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Filters</h5>
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Division</label>
+                    <select class="form-select" id="divisionFilter">
+                        <option value="">All Divisions</option>
+                        <option value="Charlotte Call Center">Charlotte (CLT)</option>
+                        <option value="Austin Call Center">Austin (ATX)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Queue Type</label>
+                    <select class="form-select" id="queueFilter">
+                        <option value="">All Queues</option>
+                        <option value="Training">Training</option>
+                        <option value="Performance">Performance</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Agent</label>
+                    <select class="form-select" id="agentFilter">
+                        <option value="">All Agents</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Manager</label>
+                    <select class="form-select" id="managerFilter">
+                        <option value="">All Managers</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <hr>
+                    <div class="row align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">Quick Date Range</label>
+                            <select class="form-select" id="quickDateRange">
+                                <option value="7">Last 7 Days</option>
+                                <option value="14">Last 14 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 custom-date-range d-none">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate">
+                        </div>
+                        <div class="col-md-3 custom-date-range d-none">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Break Even PPL</h5>
+                    <h2>$130</h2>
+                    <p class="mb-0">17.4% CR × 65.0% PR × $1,150 AP</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Target PPL</h5>
+                    <h2>$164</h2>
+                    <p class="mb-0">22.5% CR × 65.0% PR × $1,150 AP</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Average PPL</h5>
+                    <h2 id="avgPPL">$0</h2>
+                    <p class="mb-0" id="avgPPLPeriod">Current period average</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Total Agents</h5>
+                    <h2 id="totalAgents">0</h2>
+                    <p class="mb-0" id="agentBreakdown">Loading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Performance Distribution</h5>
+                    <div style="height: 300px;">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">PPL Trend</h5>
+                    <div style="height: 300px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Performance Table -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Agent Performance</h5>
+            <div class="table-responsive">
+                <table class="table table-striped" id="agentTable">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Division</th>
+                            <th>Manager</th>
+                            <th>Queue</th>
+                            <th>Avg Close Rate</th>
+                            <th>Avg Place Rate</th>
+                            <th>Avg Premium</th>
+                            <th>Avg PPL</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Details Modal -->
+<div class="modal fade" id="agentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agent Performance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="agentDetailsLoading" class="d-none">
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading agent details...</p>
+                    </div>
+                </div>
+                <div id="agentDetailsError" class="d-none">
+                    <div class="alert alert-danger">
+                        Failed to load agent details. Please try again.
+                    </div>
+                </div>
+                <div id="agentDetailsContent">
+                    <!-- Agent Info Section -->
+                    <div class="agent-info mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Agent Information</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Name:</th>
+                                        <td id="agentName"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Division:</th>
+                                        <td id="agentDivision"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Manager:</th>
+                                        <td id="agentManager"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Queue:</th>
+                                        <td id="agentQueue"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Performance Summary</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <h3 class="mb-0" id="avgPPLDetails">$0.00</h3>
+                                                <small class="text-muted">Average PPL</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <h3 class="mb-0" id="totalLeadsDetails">0</h3>
+                                                <small class="text-muted">Total Leads</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Performance Metrics</h6>
+                                    <div style="height: 300px; position: relative;">
+                                        <canvas id="agentMetricsChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">PPL Trend</h6>
+                                    <div style="height: 300px; position: relative;">
+                                        <canvas id="agentTrendChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daily Performance Table -->
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">Weekly Performance</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover" id="agentDetailsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Leads</th>
+                                            <th>Close Rate</th>
+                                            <th>Place Rate</th>
+                                            <th>Avg Premium</th>
+                                            <th>PPL</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="#" class="btn btn-success" id="addPerformanceBtn">Add Performance Data</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-trendline"></script>
+<script>
+$(document).ready(function() {
+    // Store chart instances
+    let agentMetricsChart = null;
+    let agentTrendChart = null;
+    
+    // Add modal cleanup handler
+    $('#agentDetailsModal').on('hidden.bs.modal', function () {
+        // Remove modal backdrop if it exists
+        $('.modal-backdrop').remove();
+        // Remove modal-open class from body and reset all modal-related styles
+        $('body')
+            .removeClass('modal-open')
+            .css({
+                'padding-right': '',
+                'overflow': '',
+                'height': ''
+            });
+        // Ensure any inline styles affecting scroll behavior are removed
+        $(document).css({
+            'overflow': '',
+            'padding-right': ''
+        });
+        // Force a small delay to ensure cleanup is complete
+        setTimeout(() => {
+            $('body').css('overflow', '');
+            $(window).trigger('resize');
+        }, 100);
+    });
+    
+    // Initialize date range
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    $('#startDate').val(thirtyDaysAgo.toISOString().split('T')[0]);
+    $('#endDate').val(today.toISOString().split('T')[0]);
+
+    // Handle view details button click
+    $(document).on('click', '.view-details', function() {
+        const agentId = $(this).data('agent-id');
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+
+        if (!agentId) {
+            console.error('No agent ID found');
+            return;
+        }
+
+        // Store agent ID in modal
+        $('#agentDetailsModal').data('agent-id', agentId);
+
+        // Show loading state
+        $('#agentDetailsLoading').removeClass('d-none');
+        $('#agentDetailsError').addClass('d-none');
+        $('#agentDetailsContent').addClass('d-none');
+        
+        // Show the modal immediately
+        const modal = new bootstrap.Modal($('#agentDetailsModal'));
+        modal.show();
+
+        $.get(`/api/agent_details/${agentId}`, { 
+            start_date: startDate, 
+            end_date: endDate 
+        })
+        .done(function(data) {
+            $('#agentDetailsLoading').addClass('d-none');
+            $('#agentDetailsContent').removeClass('d-none');
+            showAgentDetails(data);
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            $('#agentDetailsLoading').addClass('d-none');
+            $('#agentDetailsError').removeClass('d-none');
+            $('#agentDetailsContent').addClass('d-none');
+        });
+    });
+
+    // Aggregate data by week function
+    function aggregateDataByWeek(data) {
+        const weeklyData = {};
+        data.forEach(perf => {
+            const date = new Date(perf.date);
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay());
+            const weekKey = weekStart.toISOString().split('T')[0];
+            
+            if (!weeklyData[weekKey]) {
+                weeklyData[weekKey] = {
+                    date: weekKey,
+                    leads: 0,
+                    close_rate: 0,
+                    place_rate: 0,
+                    avg_premium: 0,
+                    ppl: 0,
+                    count: 0
+                };
+            }
+            
+            weeklyData[weekKey].leads += perf.leads;
+            weeklyData[weekKey].close_rate += perf.close_rate;
+            weeklyData[weekKey].place_rate += perf.place_rate;
+            weeklyData[weekKey].avg_premium += perf.avg_premium;
+            weeklyData[weekKey].ppl += perf.ppl;
+            weeklyData[weekKey].count++;
+        });
+        
+        return Object.values(weeklyData).map(week => ({
+            date: `Week of ${week.date}`,
+            leads: week.leads,
+            close_rate: week.close_rate / week.count,
+            place_rate: week.place_rate / week.count,
+            avg_premium: week.avg_premium / week.count,
+            avg_ppl: week.ppl / week.count,
+            ppl: week.ppl / week.count
+        }));
+    }
+
+    function updateAgentTable(agents) {
+        const tbody = $('#agentTable tbody');
+        tbody.empty();
+
+        agents.forEach(agent => {
+            const row = `
+                <tr>
+                    <td>${agent.name}</td>
+                    <td>${agent.division}</td>
+                    <td>${agent.manager}</td>
+                    <td>${agent.queue_type}</td>
+                    <td>${agent.avg_close_rate.toFixed(1)}%</td>
+                    <td>${agent.avg_place_rate.toFixed(1)}%</td>
+                    <td>$${agent.avg_premium.toFixed(2)}</td>
+                    <td>$${agent.avg_ppl.toFixed(2)}</td>
+                    <td>
+                        <span class="badge bg-${getStatusColor(agent.avg_ppl)}">
+                            ${getStatusText(agent.avg_ppl)}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary view-details" data-agent-id="${agent.id}">
+                            View Details
+                        </button>
+                        <a href="/add_performance?agent=${agent.id}" class="btn btn-sm btn-success">
+                            Add Performance
+                        </a>
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+
+    // Handle quick date range changes
+    $('#quickDateRange').on('change', function() {
+        const days = $(this).val();
+        const customDateFields = $('.custom-date-range');
+        
+        if (days === 'custom') {
+            customDateFields.removeClass('d-none');
+        } else {
+            customDateFields.addClass('d-none');
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - parseInt(days));
+            
+            $('#startDate').val(start.toISOString().split('T')[0]);
+            $('#endDate').val(end.toISOString().split('T')[0]);
+            
+            // Automatically submit form when quick range changes
+            $('#filterForm').submit();
+        }
+    });
+
+    // Initialize charts
+    const performanceChart = new Chart($('#performanceChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Above Target', 'At Break Even', 'Below Break Even'],
+            datasets: [{
+                data: [0, 0, 0],
+                backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'right'
+                }
+            },
+            animation: {
+                duration: 300
+            }
+        }
+    });
+
+    const trendChart = new Chart($('#trendChart'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Average PPL',
+                data: [],
+                borderColor: '#0d6efd',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    min: 0,
+                    max: 200,
+                    ticks: {
+                        stepSize: 50,
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        maxTicksLimit: 10
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: false
+                }
+            },
+            elements: {
+                point: {
+                    radius: 3
+                },
+                line: {
+                    borderWidth: 2
+                }
+            },
+            animation: {
+                duration: 300
+            }
+        }
+    });
+
+    // Load initial data
+    loadAgentsAndManagers();
+    loadDashboardData();
+
+    // Handle filter form submission
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+        loadDashboardData();
+    });
+
+    // Handle division filter change
+    $('#divisionFilter').on('change', function() {
+        loadAgentsAndManagers();
+    });
+
+    // Handle queue filter change
+    $('#queueFilter').on('change', function() {
+        loadAgentsAndManagers();
+    });
+
+    function loadAgentsAndManagers() {
+        const division = $('#divisionFilter').val();
+        const queue = $('#queueFilter').val();
+
+        $.get('/api/agents', { division, queue }, function(data) {
+            const agentSelect = $('#agentFilter');
+            const managerSelect = $('#managerFilter');
+            
+            // Clear existing options
+            agentSelect.html('<option value="">All Agents</option>');
+            managerSelect.html('<option value="">All Managers</option>');
+            
+            // Add new options
+            const managers = new Set();
+            data.forEach(function(agent) {
+                agentSelect.append(`<option value="${agent.id}">${agent.name}</option>`);
+                managers.add(agent.manager);
+            });
+            
+            managers.forEach(function(manager) {
+                managerSelect.append(`<option value="${manager}">${manager}</option>`);
+            });
+
+            // Trigger a data refresh
+            loadDashboardData();
+        });
+    }
+
+    function loadDashboardData() {
+        const filters = {
+            division: $('#divisionFilter').val(),
+            queue: $('#queueFilter').val(),
+            agent_id: $('#agentFilter').val(),
+            manager: $('#managerFilter').val(),
+            start_date: $('#startDate').val(),
+            end_date: $('#endDate').val()
+        };
+
+        $.get('/api/dashboard_stats', filters, function(data) {
+            // Update summary stats
+            $('#avgPPL').text(`$${data.avg_ppl.toFixed(2)}`);
+            $('#totalAgents').text(data.total_agents);
+            $('#avgPPLPeriod').text(`${data.date_range} average`);
+            $('#agentBreakdown').text(
+                `${data.training_agents} Training, ${data.performance_agents} Performance`
+            );
+
+            // Update performance chart
+            performanceChart.data.datasets[0].data = [
+                data.above_target,
+                data.at_break_even,
+                data.below_break_even
+            ];
+            performanceChart.update();
+
+            // Update trend chart
+            trendChart.data.labels = data.trend.dates;
+            trendChart.data.datasets[0].data = data.trend.ppls;
+            trendChart.update();
+
+            // Update agent table
+            updateAgentTable(data.agents);
+        });
+    }
+
+    function getStatusColor(ppl) {
+        if (ppl >= 164) return 'success';
+        if (ppl >= 130) return 'warning';
+        return 'danger';
+    }
+
+    function getStatusText(ppl) {
+        if (ppl >= 164) return 'Above Target';
+        if (ppl >= 130) return 'Break Even';
+        return 'Below Break Even';
+    }
+
+    function showAgentDetails(data) {
+        // Update agent information
+        $('#agentName').text(data.agent.name);
+        $('#agentDivision').text(data.agent.division);
+        $('#agentManager').text(data.agent.manager);
+        $('#agentQueue').text(data.agent.queue_type);
+        
+        // Aggregate data by week and limit to last 6 weeks
+        let performanceData = aggregateDataByWeek(data.performance_data)
+            .slice(-6); // Get only the last 6 weeks
+        
+        // Update performance summary
+        const totalLeads = performanceData.reduce((sum, p) => sum + p.leads, 0);
+        const avgPPL = performanceData.reduce((sum, p) => sum + p.ppl, 0) / performanceData.length;
+        
+        $('#avgPPLDetails').text(`$${avgPPL.toFixed(2)}`);
+        $('#totalLeadsDetails').text(totalLeads.toFixed(0));
+        
+        // Update Add Performance button link
+        $('#addPerformanceBtn').attr('href', `/add_performance?agent=${data.agent.id}`);
+
+        // Destroy existing charts if they exist
+        if (agentMetricsChart) {
+            agentMetricsChart.destroy();
+        }
+        if (agentTrendChart) {
+            agentTrendChart.destroy();
+        }
+
+        // Calculate trend line data
+        const xValues = performanceData.map((_, index) => index);
+        const closeRateValues = performanceData.map(p => p.close_rate);
+        const placeRateValues = performanceData.map(p => p.place_rate);
+        const pplValues = performanceData.map(p => p.ppl);
+        
+        // Simple linear regression for metrics
+        function calculateTrendLine(xVals, yVals) {
+            const n = xVals.length;
+            const sum_x = xVals.reduce((a, b) => a + b, 0);
+            const sum_y = yVals.reduce((a, b) => a + b, 0);
+            const sum_xy = xVals.reduce((a, b, i) => a + b * yVals[i], 0);
+            const sum_xx = xVals.reduce((a, b) => a + b * b, 0);
+            
+            const slope = (n * sum_xy - sum_x * sum_y) / (n * sum_xx - sum_x * sum_x);
+            const intercept = (sum_y - slope * sum_x) / n;
+            
+            return xVals.map(x => slope * x + intercept);
+        }
+
+        const metricsTrendData = calculateTrendLine(xValues, closeRateValues);
+        const pplTrendData = calculateTrendLine(xValues, pplValues);
+
+        // Update metrics chart
+        const metricsCtx = document.getElementById('agentMetricsChart').getContext('2d');
+        agentMetricsChart = new Chart(metricsCtx, {
+            type: 'bar',
+            data: {
+                labels: performanceData.map(p => p.date),
+                datasets: [{
+                    label: 'Close Rate',
+                    data: closeRateValues,
+                    backgroundColor: 'rgba(54, 162, 235, 0.3)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    order: 1,
+                    yAxisID: 'y',
+                    barPercentage: 0.6
+                },
+                {
+                    label: 'Place Rate',
+                    data: placeRateValues,
+                    backgroundColor: 'rgba(75, 192, 192, 0.3)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    order: 1,
+                    yAxisID: 'y',
+                    barPercentage: 0.6
+                },
+                {
+                    label: 'Trend',
+                    data: metricsTrendData,
+                    type: 'line',
+                    borderColor: 'rgba(255, 99, 132, 0.8)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0,
+                    order: 0,
+                    yAxisID: 'y'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label;
+                                const value = context.parsed.y.toFixed(1);
+                                return `${label}: ${value}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: value => value + '%',
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update PPL trend chart
+        const trendCtx = document.getElementById('agentTrendChart').getContext('2d');
+        agentTrendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: performanceData.map(p => p.date),
+                datasets: [{
+                    label: 'PPL Trend',
+                    data: pplValues,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Target PPL ($164)',
+                    data: Array(performanceData.length).fill(164),
+                    borderColor: 'rgba(40, 167, 69, 0.5)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Break Even ($130)',
+                    data: Array(performanceData.length).fill(130),
+                    borderColor: 'rgba(255, 193, 7, 0.5)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label;
+                                const value = context.parsed.y.toFixed(2);
+                                return `${label}: $${value}`;
+                            },
+                            afterLabel: function(context) {
+                                if (context.datasetIndex === 0 && context.dataIndex > 0) {
+                                    const currentValue = performanceData[context.dataIndex].ppl;
+                                    const previousValue = performanceData[context.dataIndex - 1].ppl;
+                                    const change = ((currentValue - previousValue) / previousValue * 100).toFixed(1);
+                                    return `Week over Week: ${change}%`;
+                                }
+                                return '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => '$' + value,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update performance table with week-over-week changes
+        const tbody = $('#agentDetailsTable tbody');
+        tbody.empty();
+        
+        performanceData.forEach((perf, index) => {
+            const status = getStatusText(perf.ppl);
+            const statusColor = getStatusColor(perf.ppl);
+            
+            // Calculate week-over-week changes
+            let pplChange = '';
+            let closeRateChange = '';
+            let placeRateChange = '';
+            
+            if (index > 0) {
+                const pplDiff = ((perf.ppl - performanceData[index - 1].ppl) / performanceData[index - 1].ppl * 100).toFixed(1);
+                const crDiff = (perf.close_rate - performanceData[index - 1].close_rate).toFixed(1);
+                const prDiff = (perf.place_rate - performanceData[index - 1].place_rate).toFixed(1);
+                
+                pplChange = `<small class="text-${pplDiff >= 0 ? 'success' : 'danger'}">
+                    (${pplDiff >= 0 ? '+' : ''}${pplDiff}%)
+                </small>`;
+                closeRateChange = `<small class="text-${crDiff >= 0 ? 'success' : 'danger'}">
+                    (${crDiff >= 0 ? '+' : ''}${crDiff}%)
+                </small>`;
+                placeRateChange = `<small class="text-${prDiff >= 0 ? 'success' : 'danger'}">
+                    (${prDiff >= 0 ? '+' : ''}${prDiff}%)
+                </small>`;
+            }
+            
+            const row = `
+                <tr>
+                    <td>${perf.date}</td>
+                    <td>${perf.leads.toFixed(0)}</td>
+                    <td>${perf.close_rate.toFixed(1)}% ${closeRateChange}</td>
+                    <td>${perf.place_rate.toFixed(1)}% ${placeRateChange}</td>
+                    <td>$${perf.avg_premium.toFixed(2)}</td>
+                    <td>$${perf.ppl.toFixed(2)} ${pplChange}</td>
+                    <td><span class="badge bg-${statusColor}">${status}</span></td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+
+    // Remove daily/weekly toggle buttons from both main view and modal
+    $('.btn-group:contains("Daily View")').remove();
+    $('.btn-group:contains("Daily")').remove();
+
+    // Update the modal title to reflect weekly view
+    $('.modal-title:contains("Daily Performance")').text('Weekly Performance');
+    $('.card-title:contains("Daily PPL Trend")').text('PPL Trend');
+});
+</script>
+{% endblock %} 

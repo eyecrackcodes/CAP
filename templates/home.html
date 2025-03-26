@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Home - PPL Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h1>Welcome to PPL Tracker</h1>
+            <p class="lead">Track and analyze Placed Premium per Lead performance across divisions</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Dashboard</h5>
+                    <p class="card-text">View overall performance metrics, PPL calculator, and agent statistics.</p>
+                    <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Add Performance Data</h5>
+                    <p class="card-text">Enter daily performance metrics for agents.</p>
+                    <a href="/add_performance" class="btn btn-success">Add Performance</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Add New Agent</h5>
+                    <p class="card-text">Register new agents in the system.</p>
+                    <a href="/add_agent" class="btn btn-info">Add Agent</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">PPL Targets</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="alert alert-warning">
+                                <h4>Break Even: $130</h4>
+                                <p class="mb-0">17.4% CR × 65.0% PR × $1,150 AP</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-success">
+                                <h4>Target: $164</h4>
+                                <p class="mb-0">22.5% CR × 65.0% PR × $1,150 AP</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

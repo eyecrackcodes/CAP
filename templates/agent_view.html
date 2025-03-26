@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}Agent Performance Analysis{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Agent Analysis</li>
+                </ol>
+            </nav>
+            <h1 class="mb-0" id="agentName">Agent Performance Analysis</h1>
+            <p class="text-muted" id="agentInfo"></p>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Date Range</label>
+                    <select class="form-select" id="dateRangeSelect">
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="180">Last 6 Months</option>
+                        <option value="365">Last Year</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3 custom-date-range d-none">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate">
+                </div>
+                <div class="col-md-3 custom-date-range d-none">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="endDate">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">View Type</label>
+                    <div class="btn-group w-100">
+                        <button type="button" class="btn btn-outline-primary active" data-view="daily">Daily</button>
+                        <button type="button" class="btn btn-outline-primary" data-view="weekly">Weekly</button>
+                        <button type="button" class="btn btn-outline-primary" data-view="monthly">Monthly</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-1">Average PPL</h6>
+                    <h2 class="mb-1" id="avgPPL">$0.00</h2>
+                    <div class="small" id="pplTrend"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-1">Close Rate</h6>
+                    <h2 class="mb-1" id="avgCloseRate">0%</h2>
+                    <div class="small" id="closeRateTrend"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-1">Place Rate</h6>
+                    <h2 class="mb-1" id="avgPlaceRate">0%</h2>
+                    <div class="small" id="placeRateTrend"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title text-muted mb-1">Average Premium</h6>
+                    <h2 class="mb-1" id="avgPremium">$0.00</h2>
+                    <div class="small" id="premiumTrend"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Performance Trends</h5>
+                    <div style="height: 400px;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Performance Distribution</h5>
+                    <div style="height: 400px;">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Metrics -->
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Performance Details</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover" id="metricsTable">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Leads</th>
+                            <th>Close Rate</th>
+                            <th>Place Rate</th>
+                            <th>Avg Premium</th>
+                            <th>PPL</th>
+                            <th>vs Target</th>
+                            <th>vs Previous</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Get agent ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const agentId = urlParams.get('agent');
+    
+    if (!agentId) {
+        window.location.href = '/dashboard';
+        return;
+    }
+
+    // Initialize date range
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    $('#startDate').val(thirtyDaysAgo.toISOString().split('T')[0]);
+    $('#endDate').val(today.toISOString().split('T')[0]);
+
+    // Chart instances
+    let trendChart = null;
+    let distributionChart = null;
+
+    // Current view settings
+    let currentView = 'daily';
+    
+    // Handle date range changes
+    $('#dateRangeSelect').on('change', function() {
+        const value = $(this).val();
+        const customFields = $('.custom-date-range');
+        
+        if (value === 'custom') {
+            customFields.removeClass('d-none');
+        } else {
+            customFields.addClass('d-none');
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - parseInt(value));
+            
+            $('#startDate').val(start.toISOString().split('T')[0]);
+            $('#endDate').val(end.toISOString().split('T')[0]);
+            loadAgentData();
+        }
+    });
+
+    // Handle view type changes
+    $('.btn-group [data-view]').on('click', function() {
+        $('.btn-group [data-view]').removeClass('active');
+        $(this).addClass('active');
+        currentView = $(this).data('view');
+        loadAgentData();
+    });
+
+    // Handle custom date changes
+    $('#startDate, #endDate').on('change', function() {
+        if ($('#dateRangeSelect').val() === 'custom') {
+            loadAgentData();
+        }
+    });
+
+    function loadAgentData() {
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+
+        $.get(`/api/agent_details/${agentId}`, {
+            start_date: startDate,
+            end_date: endDate
+        })
+        .done(function(data) {
+            updateAgentView(data);
+        })
+        .fail(function() {
+            alert('Failed to load agent data. Please try again.');
+        });
+    }
+
+    function updateAgentView(data) {
+        // Update agent info
+        $('#agentName').text(data.agent.name);
+        $('#agentInfo').text(`${data.agent.division} | ${data.agent.queue_type} | Manager: ${data.agent.manager}`);
+
+        // Process performance data based on view type
+        const processedData = processPerformanceData(data.performance_data, currentView);
+
+        // Update summary cards with trends
+        updateSummaryCards(processedData);
+
+        // Update charts
+        updateCharts(processedData);
+
+        // Update metrics table
+        updateMetricsTable(processedData);
+    }
+
+    function processPerformanceData(data, viewType) {
+        if (viewType === 'daily') {
+            return data;
+        }
+
+        // Group data by week or month
+        const groupedData = {};
+        data.forEach(perf => {
+            const date = new Date(perf.date);
+            let key;
+
+            if (viewType === 'weekly') {
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+                key = weekStart.toISOString().split('T')[0];
+            } else { // monthly
+                key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            }
+
+            if (!groupedData[key]) {
+                groupedData[key] = {
+                    date: key,
+                    leads: 0,
+                    close_rate: 0,
+                    place_rate: 0,
+                    avg_premium: 0,
+                    ppl: 0,
+                    count: 0
+                };
+            }
+
+            groupedData[key].leads += perf.leads;
+            groupedData[key].close_rate += perf.close_rate;
+            groupedData[key].place_rate += perf.place_rate;
+            groupedData[key].avg_premium += perf.avg_premium;
+            groupedData[key].ppl += perf.ppl;
+            groupedData[key].count++;
+        });
+
+        return Object.values(groupedData).map(period => ({
+            date: viewType === 'weekly' ? `Week of ${period.date}` : `${period.date.substring(0, 7)}`,
+            leads: period.leads,
+            close_rate: period.close_rate / period.count,
+            place_rate: period.place_rate / period.count,
+            avg_premium: period.avg_premium / period.count,
+            ppl: period.ppl / period.count
+        }));
+    }
+
+    function updateSummaryCards(data) {
+        const current = data[data.length - 1] || { ppl: 0, close_rate: 0, place_rate: 0, avg_premium: 0 };
+        const previous = data[data.length - 2];
+
+        function calculateTrend(current, previous, format = 'currency') {
+            if (!previous) return '';
+            const change = ((current - previous) / previous * 100).toFixed(1);
+            const arrow = change >= 0 ? '↑' : '↓';
+            const color = change >= 0 ? 'success' : 'danger';
+            const value = format === 'currency' ? `$${Math.abs(current - previous).toFixed(2)}` : `${Math.abs(change)}%`;
+            return `<span class="text-${color}">${arrow} ${value}</span>`;
+        }
+
+        $('#avgPPL').text(`$${current.ppl.toFixed(2)}`);
+        $('#avgCloseRate').text(`${current.close_rate.toFixed(1)}%`);
+        $('#avgPlaceRate').text(`${current.place_rate.toFixed(1)}%`);
+        $('#avgPremium').text(`$${current.avg_premium.toFixed(2)}`);
+
+        if (previous) {
+            $('#pplTrend').html(`vs previous: ${calculateTrend(current.ppl, previous.ppl)}`);
+            $('#closeRateTrend').html(`vs previous: ${calculateTrend(current.close_rate, previous.close_rate, 'percent')}`);
+            $('#placeRateTrend').html(`vs previous: ${calculateTrend(current.place_rate, previous.place_rate, 'percent')}`);
+            $('#premiumTrend').html(`vs previous: ${calculateTrend(current.avg_premium, previous.avg_premium)}`);
+        }
+    }
+
+    function updateCharts(data) {
+        // Destroy existing charts
+        if (trendChart) trendChart.destroy();
+        if (distributionChart) distributionChart.destroy();
+
+        // Create trend chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: [{
+                    label: 'PPL',
+                    data: data.map(d => d.ppl),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }, {
+                    label: 'Close Rate',
+                    data: data.map(d => d.close_rate),
+                    borderColor: 'rgb(54, 162, 235)',
+                    tension: 0.1,
+                    hidden: true
+                }, {
+                    label: 'Place Rate',
+                    data: data.map(d => d.place_rate),
+                    borderColor: 'rgb(255, 159, 64)',
+                    tension: 0.1,
+                    hidden: true
+                }]
+            },
+            options: {
+                responsive: true,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value => '$' + value
+                        }
+                    }
+                }
+            }
+        });
+
+        // Create distribution chart
+        const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+        const pplValues = data.map(d => d.ppl);
+        const bins = calculateHistogramBins(pplValues);
+
+        distributionChart = new Chart(distributionCtx, {
+            type: 'bar',
+            data: {
+                labels: bins.map(b => `$${b.min.toFixed(0)}-$${b.max.toFixed(0)}`),
+                datasets: [{
+                    label: 'Frequency',
+                    data: bins.map(b => b.count),
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgb(75, 192, 192)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function calculateHistogramBins(values) {
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binCount = 10;
+        const binSize = (max - min) / binCount;
+        
+        const bins = Array.from({ length: binCount }, (_, i) => ({
+            min: min + (i * binSize),
+            max: min + ((i + 1) * binSize),
+            count: 0
+        }));
+
+        values.forEach(value => {
+            const binIndex = Math.min(Math.floor((value - min) / binSize), binCount - 1);
+            bins[binIndex].count++;
+        });
+
+        return bins;
+    }
+
+    function updateMetricsTable(data) {
+        const tbody = $('#metricsTable tbody');
+        tbody.empty();
+
+        data.forEach((period, index) => {
+            const previous = data[index - 1];
+            const vsTarget = ((period.ppl - 164) / 164 * 100).toFixed(1);
+            const vsPrevious = previous ? ((period.ppl - previous.ppl) / previous.ppl * 100).toFixed(1) : 'N/A';
+
+            const row = `
+                <tr>
+                    <td>${period.date}</td>
+                    <td>${period.leads.toFixed(0)}</td>
+                    <td>${period.close_rate.toFixed(1)}%</td>
+                    <td>${period.place_rate.toFixed(1)}%</td>
+                    <td>$${period.avg_premium.toFixed(2)}</td>
+                    <td>$${period.ppl.toFixed(2)}</td>
+                    <td>
+                        <span class="text-${vsTarget >= 0 ? 'success' : 'danger'}">
+                            ${vsTarget}%
+                        </span>
+                    </td>
+                    <td>
+                        ${vsPrevious === 'N/A' ? 'N/A' : `
+                            <span class="text-${vsPrevious >= 0 ? 'success' : 'danger'}">
+                                ${vsPrevious}%
+                            </span>
+                        `}
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+
+    // Initial load
+    loadAgentData();
+});
+</script>
+{% endblock %} 

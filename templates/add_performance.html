@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Add Performance Data - PPL Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="mb-4">Add Daily Performance Data</h1>
+            <div class="card">
+                <div class="card-body">
+                    <form id="performanceForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="agent" class="form-label">Agent</label>
+                                <select class="form-select" id="agent" name="agent_id" required>
+                                    <option value="">Select Agent</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date" class="form-label">Date</label>
+                                <input type="date" class="form-control" id="date" name="date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="leads" class="form-label">Leads Taken</label>
+                                <input type="number" class="form-control" id="leads" name="leads_taken" step="0.1" min="0" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="closeRate" class="form-label">Close Rate (%)</label>
+                                <input type="number" class="form-control" id="closeRate" name="close_rate" step="0.1" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="placeRate" class="form-label">Place Rate (%)</label>
+                                <input type="number" class="form-control" id="placeRate" name="place_rate" step="0.1" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="avgPremium" class="form-label">Average Premium ($)</label>
+                                <input type="number" class="form-control" id="avgPremium" name="avg_premium" step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="talkTime" class="form-label">Talk Time (minutes)</label>
+                                <input type="number" class="form-control" id="talkTime" name="talk_time_minutes" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="1"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h4>Calculated Metrics</h4>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-subtitle mb-2 text-muted">PPL</h6>
+                                            <h3 id="calculatedPPL" class="mb-0">$0.00</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-subtitle mb-2 text-muted">Daily Premium</h6>
+                                            <h3 id="calculatedPremium" class="mb-0">$0.00</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <h6 class="card-subtitle mb-2 text-muted">Status</h6>
+                                            <div id="performanceStatus" class="alert mb-0" role="alert">
+                                                Below Break Even
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                            <button type="reset" class="btn btn-secondary">Reset</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="alertContainer" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    $('#date').val(today);
+
+    // Get agent ID from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const preSelectedAgentId = urlParams.get('agent');
+
+    // Load agents
+    $.get('/api/agents', function(data) {
+        const select = $('#agent');
+        data.forEach(function(agent) {
+            const option = `<option value="${agent.id}">${agent.name} (${agent.division})</option>`;
+            select.append(option);
+        });
+
+        // Pre-select agent if ID was provided
+        if (preSelectedAgentId) {
+            select.val(preSelectedAgentId);
+        }
+    });
+
+    // Calculate metrics on input
+    function calculateMetrics() {
+        const closeRate = parseFloat($('#closeRate').val()) || 0;
+        const placeRate = parseFloat($('#placeRate').val()) || 0;
+        const avgPremium = parseFloat($('#avgPremium').val()) || 0;
+        const leads = parseFloat($('#leads').val()) || 0;
+
+        // Calculate PPL
+        const ppl = (closeRate / 100) * (placeRate / 100) * avgPremium;
+        $('#calculatedPPL').text(`$${ppl.toFixed(2)}`);
+
+        // Calculate daily premium
+        const dailyPremium = ppl * leads;
+        $('#calculatedPremium').text(`$${dailyPremium.toFixed(2)}`);
+
+        // Update performance status
+        const statusDiv = $('#performanceStatus');
+        statusDiv.removeClass('alert-success alert-warning alert-danger');
+        
+        if (ppl >= 164) {
+            statusDiv.addClass('alert-success').text('Above Target');
+        } else if (ppl >= 130) {
+            statusDiv.addClass('alert-warning').text('Break Even');
+        } else {
+            statusDiv.addClass('alert-danger').text('Below Break Even');
+        }
+    }
+
+    // Attach calculator to input fields
+    $('#closeRate, #placeRate, #avgPremium, #leads').on('input', calculateMetrics);
+
+    // Handle form submission
+    $('#performanceForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        // Add calculated fields
+        const closeRate = parseFloat(formData.get('close_rate')) || 0;
+        const placeRate = parseFloat(formData.get('place_rate')) || 0;
+        const avgPremium = parseFloat(formData.get('avg_premium')) || 0;
+        const leads = parseFloat(formData.get('leads_taken')) || 0;
+        
+        const ppl = (closeRate / 100) * (placeRate / 100) * avgPremium;
+        const dailyPremium = ppl * leads;
+        
+        formData.append('placed_premium_per_lead', ppl);
+        formData.append('total_daily_premium', dailyPremium);
+
+        $.ajax({
+            url: '/api/add_performance',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                showAlert('success', 'Performance data added successfully!');
+                
+                // Reset form but keep the agent selection
+                const agentId = $('#agent').val();
+                $('#performanceForm')[0].reset();
+                $('#date').val(today);
+                $('#agent').val(agentId);
+                
+                // Reset calculated metrics
+                calculateMetrics();
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred';
+                showAlert('danger', error);
+            }
+        });
+    });
+
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        $('#alertContainer').html(alertHtml);
+    }
+});
+</script>
+{% endblock %} 

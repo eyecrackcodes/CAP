@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Add Data - RPL Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1 class="mb-4">Add Daily Data</h1>
+        <div class="card">
+            <div class="card-body">
+                <form id="dataForm">
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="leads" class="form-label">Number of Leads</label>
+                        <input type="number" class="form-control" id="leads" name="leads" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="premium" class="form-label">Total Premium ($)</label>
+                        <input type="number" class="form-control" id="premium" name="premium" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Add any relevant notes about today's data"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+        
+        <div id="alertContainer" class="mt-3"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Set default date to today
+    const today = new Date().toISOString().split('T')[0];
+    $('#date').val(today);
+
+    $('#dataForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            date: $('#date').val(),
+            leads: $('#leads').val(),
+            premium: $('#premium').val(),
+            notes: $('#notes').val()
+        };
+
+        $.ajax({
+            url: '/add_data',
+            method: 'POST',
+            data: formData,
+            success: function(response) {
+                showAlert('success', 'Data added successfully!');
+                $('#dataForm')[0].reset();
+                $('#date').val(today);
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred';
+                showAlert('danger', error);
+            }
+        });
+    });
+
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        $('#alertContainer').html(alertHtml);
+    }
+});
+</script>
+{% endblock %} 

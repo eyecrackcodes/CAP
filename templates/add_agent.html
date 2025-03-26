@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Agent - PPL Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>Add New Agent</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <form id="addAgentForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Agent Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="division" class="form-label">Division</label>
+                            <select class="form-select" id="division" name="division" required>
+                                <option value="">Select Division</option>
+                                <option value="Charlotte Call Center">Charlotte (CLT)</option>
+                                <option value="Austin Call Center">Austin (ATX)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="manager" class="form-label">Manager</label>
+                            <select class="form-select" id="manager" name="manager" required>
+                                <option value="">Select Manager</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="queue_type" class="form-label">Queue Type</label>
+                            <select class="form-select" id="queue_type" name="queue_type" required>
+                                <option value="">Select Queue Type</option>
+                                <option value="training">Training</option>
+                                <option value="performance">Performance</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-danger d-none" id="errorAlert"></div>
+                        <div class="alert alert-success d-none" id="successAlert"></div>
+                        <button type="submit" class="btn btn-primary">Add Agent</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Manager mapping
+    const managers = {
+        'Austin Call Center': [
+            'David Druxman',
+            'Frederick Holguin',
+            'Lanae Edwards',
+            'Mario Herrera',
+            'Patricia Lewis'
+        ],
+        'Charlotte Call Center': [
+            'Brent Lahti',
+            'Jacob Fuller',
+            'Jamal Gipson',
+            'Jovan Espinoza',
+            'Katelyn Helms',
+            'Nisrin Hajmahmoud',
+            'Vincent Blanchett'
+        ]
+    };
+
+    // Update managers when division changes
+    $('#division').on('change', function() {
+        const division = $(this).val();
+        const managerSelect = $('#manager');
+        managerSelect.empty();
+        managerSelect.append('<option value="">Select Manager</option>');
+        
+        if (division && managers[division]) {
+            managers[division].forEach(function(manager) {
+                managerSelect.append(`<option value="${manager}">${manager}</option>`);
+            });
+        }
+    });
+
+    // Handle form submission
+    $('#addAgentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            name: $('#name').val(),
+            division: $('#division').val(),
+            manager: $('#manager').val(),
+            queue_type: $('#queue_type').val()
+        };
+
+        $.ajax({
+            url: '/api/add_agent',
+            method: 'POST',
+            data: formData,
+            success: function(response) {
+                $('#errorAlert').addClass('d-none');
+                $('#successAlert')
+                    .removeClass('d-none')
+                    .text('Agent added successfully!');
+                $('#addAgentForm')[0].reset();
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred';
+                $('#successAlert').addClass('d-none');
+                $('#errorAlert')
+                    .removeClass('d-none')
+                    .text(error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 
