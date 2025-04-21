@@ -1,96 +1,118 @@
 from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
 import os
+from datetime import datetime
 
 # Create app
 app = Flask(__name__)
 
-# Use the Supabase connection string from Vercel environment variables
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://postgres:xe2Gyu!56h6tWQD@db.ndiwwxpixxwwbkpdmmqq.supabase.co:5432/postgres')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '12345678900987654321')
+# Simple static data for API responses
+AGENTS = [
+    {
+        "id": 1,
+        "name": "John Smith",
+        "division": "Charlotte (CLT)",
+        "manager": "Patricia Lewis",
+        "queue_type": "performance",
+        "is_active": True
+    },
+    {
+        "id": 2,
+        "name": "Jane Doe",
+        "division": "Austin (ATX)",
+        "manager": "Vincent Blanchett",
+        "queue_type": "training",
+        "is_active": True
+    },
+    {
+        "id": 3,
+        "name": "Mike Johnson",
+        "division": "Charlotte (CLT)",
+        "manager": "Frederick Holguin",
+        "queue_type": "performance",
+        "is_active": False
+    }
+]
 
-# Initialize database
-db = SQLAlchemy(app)
-
-# Define models inline to avoid dependencies
-class Agent(db.Model):
-    __tablename__ = 'agent'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    division = db.Column(db.String(100), nullable=False)
-    manager = db.Column(db.String(100), nullable=False)
-    queue_type = db.Column(db.String(50), nullable=False)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class DailyPerformance(db.Model):
-    __tablename__ = 'daily_performance'
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    agent_id = db.Column(db.Integer, db.ForeignKey('agent.id'), nullable=False)
-    leads_taken = db.Column(db.Float, nullable=False)
-    close_rate = db.Column(db.Float, nullable=False)
-    avg_premium = db.Column(db.Float, nullable=False)
-    place_rate = db.Column(db.Float, nullable=False)
-    placed_premium_per_lead = db.Column(db.Float)
-    total_daily_premium = db.Column(db.Float)
-    sales_made = db.Column(db.Integer)
-    talk_time_minutes = db.Column(db.Integer)
-    notes = db.Column(db.Text)
-
-    def calculate_ppl(self):
-        """Calculate Placed Premium per Lead"""
-        return (self.close_rate / 100) * (self.place_rate / 100) * self.avg_premium
-
-class APIKey(db.Model):
-    __tablename__ = 'api_key'
-    id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(64), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_used_at = db.Column(db.DateTime)
-    is_active = db.Column(db.Boolean, default=True)
+PERFORMANCE_DATA = {
+    1: [
+        {
+            "date": "2023-04-01",
+            "leads": 8,
+            "close_rate": 28.5,
+            "place_rate": 72.3,
+            "avg_premium": 3954.21,
+            "ppl": 164.32
+        },
+        {
+            "date": "2023-04-08",
+            "leads": 7,
+            "close_rate": 30.2,
+            "place_rate": 68.7,
+            "avg_premium": 4102.45,
+            "ppl": 172.56
+        }
+    ],
+    2: [
+        {
+            "date": "2023-04-01",
+            "leads": 5,
+            "close_rate": 22.4,
+            "place_rate": 65.8,
+            "avg_premium": 3644.78,
+            "ppl": 122.18
+        },
+        {
+            "date": "2023-04-08",
+            "leads": 6,
+            "close_rate": 25.1,
+            "place_rate": 70.2,
+            "avg_premium": 3780.33,
+            "ppl": 135.45
+        }
+    ],
+    3: [
+        {
+            "date": "2023-04-01",
+            "leads": 7,
+            "close_rate": 26.8,
+            "place_rate": 71.5,
+            "avg_premium": 3835.92,
+            "ppl": 155.67
+        },
+        {
+            "date": "2023-04-08",
+            "leads": 8,
+            "close_rate": 29.3,
+            "place_rate": 67.9,
+            "avg_premium": 4021.56,
+            "ppl": 163.21
+        }
+    ]
+}
 
 # API routes
 @app.route('/api/agents', methods=['GET'])
 def get_agents():
-    agents = Agent.query.all()
-    return jsonify([{
-        'id': agent.id,
-        'name': agent.name,
-        'division': agent.division,
-        'manager': agent.manager,
-        'queue_type': agent.queue_type,
-        'is_active': agent.is_active
-    } for agent in agents])
+    return jsonify(AGENTS)
 
 @app.route('/api/agent_details/<int:agent_id>')
 def get_agent_details(agent_id):
-    agent = Agent.query.get_or_404(agent_id)
-    performances = DailyPerformance.query.filter(
-        DailyPerformance.agent_id == agent_id
-    ).order_by(DailyPerformance.date).all()
-
-    daily_data = [{
-        'date': perf.date.strftime('%Y-%m-%d'),
-        'leads': perf.leads_taken,
-        'close_rate': perf.close_rate,
-        'place_rate': perf.place_rate,
-        'avg_premium': perf.avg_premium,
-        'ppl': perf.calculate_ppl()
-    } for perf in performances]
-
+    # Find agent by ID
+    agent = next((a for a in AGENTS if a["id"] == agent_id), None)
+    if not agent:
+        return jsonify({"error": "Agent not found"}), 404
+    
+    # Get performance data for this agent
+    performances = PERFORMANCE_DATA.get(agent_id, [])
+    
     return jsonify({
         'agent': {
-            'name': agent.name,
-            'division': agent.division,
-            'manager': agent.manager,
-            'queue_type': agent.queue_type
+            'name': agent["name"],
+            'division': agent["division"],
+            'manager': agent["manager"],
+            'queue_type': agent["queue_type"]
         },
-        'performance_data': daily_data
+        'performance_data': performances
     })
 
 # Default route returns API info
@@ -100,7 +122,7 @@ def catch_all(path):
     return jsonify({
         "status": "ok",
         "message": "CAP API is running",
-        "note": "This is a minimal API deployment version for Vercel. To access the full app, use the main deployment.",
+        "note": "This is a static demo version with sample data.",
         "api_endpoints": [
             "/api/agents",
             "/api/agent_details/<agent_id>"

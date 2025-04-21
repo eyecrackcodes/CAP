@@ -1,1 +1,1 @@
-web: gunicorn app:app 
+web: PYTHONPATH=$PYTHONPATH:./ python index.py 
