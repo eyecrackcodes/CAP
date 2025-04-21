@@ -1,0 +1,12 @@
+{
+  "name": "cap",
+  "version": "1.0.0",
+  "description": "Agent Performance Dashboard",
+  "main": "index.js",
+  "scripts": {
+    "start": "gunicorn app:app"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -1,0 +1,70 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Development environments
+venv/
+env/
+ENV/
+.env
+.venv
+.env.example
+.flaskenv
+test_*.py
+
+# Database files that should be created dynamically
+instance/
+*.db
+*.sqlite3
+
+# Logs and other generated files
+*.log
+logs/
+uploads/
+.pytest_cache/
+.coverage
+.tox/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.pem
+
+# Vercel specific
+.vercel
+.git
+.gitignore
+
+# Directories
+__pycache__/
+venv/
+instance/
+.git/
+vercel-deploy/
+
+# Data files
+*.csv
+*.xlsx
+*.json
+!vercel.json
+
+# Python files 
+*.pyc
+*.pyo
+*.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Original app files - use only index.py for Vercel
+app.py
+models.py
+looker_api.py
+ai_insights.py 
