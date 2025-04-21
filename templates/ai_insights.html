@@ -1,0 +1,351 @@
+{% extends "base.html" %} {% block title %}AI Insights{% endblock %} {% block
+styles %}
+<style>
+  .chat-container {
+    height: calc(100vh - 250px);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .messages-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+  }
+
+  .message {
+    margin-bottom: 15px;
+    max-width: 80%;
+  }
+
+  .user-message {
+    background-color: #e3f2fd;
+    padding: 10px 15px;
+    border-radius: 18px 18px 0 18px;
+    align-self: flex-end;
+    margin-left: auto;
+  }
+
+  .assistant-message {
+    background-color: white;
+    padding: 10px 15px;
+    border-radius: 18px 18px 18px 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .chat-input-container {
+    padding: 15px;
+    background-color: white;
+    border-top: 1px solid #dee2e6;
+  }
+
+  .loading-dots {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+  }
+
+  .loading-dots span {
+    width: 8px;
+    height: 8px;
+    margin: 0 2px;
+    background-color: #6c757d;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.5s infinite ease-in-out;
+  }
+
+  .loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes bounce {
+    0%,
+    80%,
+    100% {
+      transform: scale(0);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .follow-up-btn {
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+  }
+
+  .chart-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 15px 0;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col">
+      <h1 class="h3 mb-0">AI Insights</h1>
+      <p class="text-muted">Ask questions about agent performance data</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card shadow mb-4">
+        <div class="card-body p-0">
+          <div class="chat-container">
+            <div id="messages-container" class="messages-container">
+              <div class="message assistant-message">
+                <p>
+                  Hi! I'm your AI assistant. How can I help you understand your
+                  agent performance data today?
+                </p>
+                <div>
+                  <button
+                    class="btn btn-sm btn-outline-primary follow-up-btn"
+                    onclick="askQuestion('Who are the top 5 agents by PPL?')"
+                  >
+                    Top 5 agents by PPL
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-primary follow-up-btn"
+                    onclick="askQuestion('What\'s the average PPL across all agents?')"
+                  >
+                    Average PPL
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-primary follow-up-btn"
+                    onclick="askQuestion('Compare Austin and Charlotte performance')"
+                  >
+                    Compare divisions
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="chat-input-container">
+              <form id="question-form" class="d-flex">
+                <input
+                  type="text"
+                  id="question-input"
+                  class="form-control"
+                  placeholder="Ask about agent performance..."
+                />
+                <button type="submit" class="btn btn-primary ms-2">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Example Questions</h6>
+        </div>
+        <div class="card-body">
+          <ul class="list-unstyled">
+            <li class="mb-2">
+              <a
+                href="#"
+                onclick="askQuestion('Who has the highest PPL this month?')"
+                >Who has the highest PPL this month?</a
+              >
+            </li>
+            <li class="mb-2">
+              <a
+                href="#"
+                onclick="askQuestion('What is John Doe\'s performance?')"
+                >What is John Doe's performance?</a
+              >
+            </li>
+            <li class="mb-2">
+              <a
+                href="#"
+                onclick="askQuestion('Compare Austin and Charlotte average PPL')"
+                >Compare Austin and Charlotte average PPL</a
+              >
+            </li>
+            <li class="mb-2">
+              <a
+                href="#"
+                onclick="askQuestion('Show me agents with PPL below break-even')"
+                >Show me agents with PPL below break-even</a
+              >
+            </li>
+            <li class="mb-2">
+              <a
+                href="#"
+                onclick="askQuestion('Which manager has the best team performance?')"
+                >Which manager has the best team performance?</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let charts = [];
+
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize the question form
+    const questionForm = document.getElementById("question-form");
+    const questionInput = document.getElementById("question-input");
+    const messagesContainer = document.getElementById("messages-container");
+
+    questionForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const question = questionInput.value.trim();
+      if (question) {
+        askQuestion(question);
+        questionInput.value = "";
+      }
+    });
+
+    // Auto-scroll to bottom when new messages are added
+    const observer = new MutationObserver(function () {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
+
+    observer.observe(messagesContainer, { childList: true, subtree: true });
+  });
+
+  function askQuestion(question) {
+    // Add user message to the chat
+    const messagesContainer = document.getElementById("messages-container");
+    const userMessageDiv = document.createElement("div");
+    userMessageDiv.className = "message user-message";
+    userMessageDiv.innerHTML = `<p>${escapeHtml(question)}</p>`;
+    messagesContainer.appendChild(userMessageDiv);
+
+    // Add loading indicator
+    const loadingDiv = document.createElement("div");
+    loadingDiv.className = "message assistant-message";
+    loadingDiv.innerHTML = `
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        `;
+    messagesContainer.appendChild(loadingDiv);
+
+    // Scroll to the bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Send the question to the API
+    fetch("/api/ai_insights", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ question: question }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // Remove loading indicator
+        messagesContainer.removeChild(loadingDiv);
+
+        // Add assistant response
+        const assistantMessageDiv = document.createElement("div");
+        assistantMessageDiv.className = "message assistant-message";
+
+        // Parse response
+        let responseHTML = `<p>${data.answer}</p>`;
+
+        // Add chart if present
+        if (data.chart_data) {
+          const chartId = "chart-" + Date.now();
+          responseHTML += `<div class="chart-container"><canvas id="${chartId}"></canvas></div>`;
+
+          // We'll create the chart after the DOM is updated
+          setTimeout(() => createChart(chartId, data.chart_data), 100);
+        }
+
+        // Add follow-up question buttons if present
+        if (data.follow_up_questions && data.follow_up_questions.length > 0) {
+          responseHTML += "<div>";
+          data.follow_up_questions.forEach((question) => {
+            responseHTML += `<button class="btn btn-sm btn-outline-primary follow-up-btn" onclick="askQuestion('${escapeHtml(
+              question
+            )}')">${escapeHtml(question)}</button>`;
+          });
+          responseHTML += "</div>";
+        }
+
+        assistantMessageDiv.innerHTML = responseHTML;
+        messagesContainer.appendChild(assistantMessageDiv);
+
+        // Scroll to the bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+
+        // Remove loading indicator
+        messagesContainer.removeChild(loadingDiv);
+
+        // Add error message
+        const errorMessageDiv = document.createElement("div");
+        errorMessageDiv.className = "message assistant-message";
+        errorMessageDiv.innerHTML = `<p class="text-danger">Sorry, there was an error processing your request. Please try again.</p>`;
+        messagesContainer.appendChild(errorMessageDiv);
+
+        // Scroll to the bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      });
+  }
+
+  function createChart(chartId, chartData) {
+    const ctx = document.getElementById(chartId).getContext("2d");
+
+    // Destroy any existing chart with the same ID
+    if (charts[chartId]) {
+      charts[chartId].destroy();
+    }
+
+    // Create the new chart
+    if (chartData.type === "doughnut") {
+      charts[chartId] = new Chart(ctx, {
+        type: chartData.type,
+        data: chartData.data,
+        options: chartData.options,
+      });
+    } else if (chartData.type === "bar") {
+      charts[chartId] = new Chart(ctx, {
+        type: chartData.type,
+        data: chartData.data,
+        options: chartData.options,
+      });
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+{% endblock %}
