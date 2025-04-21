@@ -1,26 +1,18 @@
 {
+  "version": 2,
   "builds": [
     {
-      "src": "api_minimal.py",
+      "src": "index.py",
       "use": "@vercel/python",
       "config": {
-        "pip_requirements": "minimal-requirements.txt",
-        "maxLambdaSize": "10mb"
+        "maxLambdaSize": "50mb"
       }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "api_minimal.py"
-    },
-    {
       "src": "/(.*)",
-      "dest": "api_minimal.py"
+      "dest": "index.py"
     }
-  ],
-  "env": {
-    "VERCEL": "true",
-    "PYTHONUNBUFFERED": "1"
-  }
+  ]
 }
