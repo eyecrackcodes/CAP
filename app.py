@@ -17,16 +17,30 @@ from looker_api import register_looker_api
 from ai_insights import register_ai_insights
 
 app = Flask(__name__)
-# Supabase PostgreSQL connection string
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:xe2Gyu!56h6tWQD@db.ndiwwxpixxwwbkpdmmqq.supabase.co:5432/postgres'
+
+# Check if running on Vercel and configure accordingly
+IS_VERCEL = os.environ.get('VERCEL', False)
+
+# Database configuration - Use environment variables for Vercel deployment
+if IS_VERCEL:
+    # Use Supabase or any PostgreSQL database suitable for production
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://postgres:xe2Gyu!56h6tWQD@db.ndiwwxpixxwwbkpdmmqq.supabase.co:5432/postgres')
+else:
+    # Local development database
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:xe2Gyu!56h6tWQD@db.ndiwwxpixxwwbkpdmmqq.supabase.co:5432/postgres'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize the db
 from models import db, Agent, DailyPerformance, APIKey
 db.init_app(app)
 
-# Configure upload folder
-UPLOAD_FOLDER = 'uploads'
+# Configure upload folder - for Vercel, use /tmp for file uploads
+if IS_VERCEL:
+    UPLOAD_FOLDER = '/tmp'
+else:
+    UPLOAD_FOLDER = 'uploads'
+
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
