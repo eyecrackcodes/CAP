@@ -1,0 +1,42 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Development environments
+venv/
+env/
+ENV/
+.env
+.venv
+.env.example
+.flaskenv
+test_*.py
+
+# Database files that should be created dynamically
+instance/
+*.db
+*.sqlite3
+
+# Logs and other generated files
+*.log
+logs/
+uploads/
+.pytest_cache/
+.coverage
+.tox/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.pem
+
+# Vercel specific
+.vercel
+.git
+.gitignore 
