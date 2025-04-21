@@ -1,8 +1,11 @@
 [phases.setup]
-nixPkgs = ["..."]
+nixPkgs = ["python3", "gcc"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python -m venv --copies /opt/venv", ". /opt/venv/bin/activate && pip install -r requirements.txt"]
+
+[phases.build]
+cmds = ["chmod +x start.sh"]
 
 [start]
-cmd = "python -m gunicorn app:app" 
+cmd = "gunicorn app:app" 
