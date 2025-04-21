@@ -18,11 +18,15 @@ from ai_insights import register_ai_insights
 
 app = Flask(__name__)
 
-# Check if running on Vercel and configure accordingly
+# Check if running on Render and configure accordingly
+IS_RENDER = os.environ.get('RENDER', False)
 IS_VERCEL = os.environ.get('VERCEL', False)
 
-# Database configuration - Use environment variables for Vercel deployment
-if IS_VERCEL:
+# Database configuration - Use environment variables for Render deployment
+if IS_RENDER:
+    # Use the provided DATABASE_URL from Render
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+elif IS_VERCEL:
     # Use Supabase or any PostgreSQL database suitable for production
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://postgres:xe2Gyu!56h6tWQD@db.ndiwwxpixxwwbkpdmmqq.supabase.co:5432/postgres')
 else:

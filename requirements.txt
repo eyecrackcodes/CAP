@@ -13,4 +13,5 @@ MarkupSafe
 plotly
 numpy
 tenacity
-packaging 
+packaging
+psycopg2-binary 
