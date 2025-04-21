@@ -4,7 +4,8 @@
       "src": "vercel_app.py",
       "use": "@vercel/python",
       "config": {
-        "pip_requirements": "requirements-vercel.txt"
+        "pip_requirements": "requirements-vercel.txt",
+        "maxLambdaSize": "15mb"
       }
     }
   ],
@@ -13,5 +14,9 @@
       "src": "/(.*)",
       "dest": "vercel_app.py"
     }
-  ]
+  ],
+  "env": {
+    "VERCEL": "true",
+    "PYTHONUNBUFFERED": "1"
+  }
 }
