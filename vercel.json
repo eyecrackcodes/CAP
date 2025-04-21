@@ -1,22 +1,22 @@
 {
   "builds": [
     {
-      "src": "api_only.py",
+      "src": "api_minimal.py",
       "use": "@vercel/python",
       "config": {
-        "pip_requirements": "requirements-vercel.txt",
-        "maxLambdaSize": "15mb"
+        "pip_requirements": "minimal-requirements.txt",
+        "maxLambdaSize": "10mb"
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api_only.py"
+      "dest": "api_minimal.py"
     },
     {
       "src": "/(.*)",
-      "dest": "api_only.py"
+      "dest": "api_minimal.py"
     }
   ],
   "env": {
