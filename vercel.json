@@ -1,7 +1,7 @@
 {
   "builds": [
     {
-      "src": "vercel_app.py",
+      "src": "api_only.py",
       "use": "@vercel/python",
       "config": {
         "pip_requirements": "requirements-vercel.txt",
@@ -11,8 +11,12 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "api_only.py"
+    },
+    {
       "src": "/(.*)",
-      "dest": "vercel_app.py"
+      "dest": "api_only.py"
     }
   ],
   "env": {
